@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Chatbot</title>
+    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Movie Expert Chatbot</h1>
+        </div>
+        <div id="chatbox"></div>
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <form id="chat-form">
+            <input type="text" id="user-input" autocomplete="off" placeholder="Type your message here...">
+            <button type="submit"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#loading').hide();
+            
+            $('#chat-form').submit(function(e) {
+                e.preventDefault();
+                let userMessage = $('#user-input').val();
+                if (userMessage.trim() !== '') {
+                    $('#chatbox').append('<div class="message user-message"><span>' + userMessage + '</span></div>');
+                    $('#user-input').val('');
+                    $('#loading').show();
+
+                    $.ajax({
+                        url: '/chat',
+                        method: 'POST',
+                        data: { message: userMessage },
+                        success: function(data) {
+                            $('#loading').hide();
+                            let botMessage = data.response;
+                            let youtubeEmbed = embedYouTubeLinks(botMessage);
+                            $('#chatbox').append('<div class="message bot-response">' + youtubeEmbed + '</div>');
+                            $('#chatbox').scrollTop($('#chatbox')[0].scrollHeight);
+                        },
+                        error: function() {
+                            $('#loading').hide();
+                            $('#chatbox').append('<div class="message bot-response"><span>Oops! Something went wrong. Please try again.</span></div>');
+                            $('#chatbox').scrollTop($('#chatbox')[0].scrollHeight);
+                        }
+                    });
+                }
+            });
+
+            function embedYouTubeLinks(message) {
+                let urlPattern = /https?:\/\/(www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/g;
+                let embedPattern = /https?:\/\/(www\.)?youtu\.be\/([a-zA-Z0-9_-]+)/g;
+                let replacedMessage = message.replace(urlPattern, function(match, p1, p2) {
+                    return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${p2}" frameborder="0" allowfullscreen></iframe>`;
+                });
+                replacedMessage = replacedMessage.replace(embedPattern, function(match, p1, p2) {
+                    return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${p2}" frameborder="0" allowfullscreen></iframe>`;
+                });
+                return replacedMessage;
+            }
+        });
+    </script>
+</body>
+</html>
