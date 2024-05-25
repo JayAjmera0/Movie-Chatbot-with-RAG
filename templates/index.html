@@ -6,6 +6,26 @@
     <title>Movie Chatbot</title>
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Additional CSS for message alignment */
+        .message {
+            margin: 10px 0;
+            clear: both;
+            overflow: hidden;
+        }
+        .user-message {
+            float: left;
+            clear: both;
+        }
+        .bot-response {
+            float: right;
+            clear: both;
+        }
+        .message-icon {
+            font-size: 1.2em;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="chat-container">
@@ -30,7 +50,7 @@
                 e.preventDefault();
                 let userMessage = $('#user-input').val();
                 if (userMessage.trim() !== '') {
-                    $('#chatbox').append('<div class="message user-message"><span>' + userMessage + '</span></div>');
+                    $('#chatbox').append('<div class="message user-message"><span class="message-icon">🧑</span>' + userMessage + '</div>');
                     $('#user-input').val('');
                     $('#loading').show();
 
@@ -42,12 +62,12 @@
                             $('#loading').hide();
                             let botMessage = data.response;
                             let youtubeEmbed = embedYouTubeLinks(botMessage);
-                            $('#chatbox').append('<div class="message bot-response">' + youtubeEmbed + '</div>');
+                            $('#chatbox').append('<div class="message bot-response"><span class="message-icon">🤖</span>' + youtubeEmbed + '</div>');
                             $('#chatbox').scrollTop($('#chatbox')[0].scrollHeight);
                         },
                         error: function() {
                             $('#loading').hide();
-                            $('#chatbox').append('<div class="message bot-response"><span>Oops! Something went wrong. Please try again.</span></div>');
+                            $('#chatbox').append('<div class="message bot-response"><span class="message-icon">🤖</span>Oops! Something went wrong. Please try again.</div>');
                             $('#chatbox').scrollTop($('#chatbox')[0].scrollHeight);
                         }
                     });

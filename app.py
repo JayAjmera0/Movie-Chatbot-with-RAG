@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, jsonify
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain.chains import LLMChain, RetrievalQA
 from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools import Tool
 from langchain import hub
 from langchain_community.tools import YouTubeSearchTool
+from langchain_community.vectorstores.neo4j_vector import Neo4jVector
 from langchain_google_genai import GoogleGenerativeAI
-
+from langchain.embeddings import SentenceTransformerEmbeddings
 # Initialize the Flask application
 app = Flask(__name__)
 
@@ -30,6 +31,29 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 chat_chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
 
 youtube = YouTubeSearchTool()
+embeddings = SentenceTransformerEmbeddings(model_name='sentence-transformers/bert-large-nli-mean-tokens')
+movie_plot_vector = Neo4jVector.from_existing_index(
+    embeddings,
+    url="bolt://localhost:7687",
+    username="neo4j",
+    password="kallind123",
+    index_name="moviePlots",
+    embedding_node_property="embedding",
+    text_node_property="plot",
+)
+
+plot_retriever = RetrievalQA.from_llm(
+    llm=llm,
+    retriever=movie_plot_vector.as_retriever(),
+    verbose=True,
+    return_source_documents=True
+)
+
+def run_retriever(query):
+    results = plot_retriever.invoke({"query":query})
+    # format the results
+    movies = '\n'.join([doc.metadata["title"] + " - " + doc.page_content for doc in results["source_documents"]])
+    return movies
 
 tools = [
     Tool.from_function(
@@ -44,6 +68,12 @@ tools = [
         func=youtube.run,
         return_direct=True,
     ),
+    Tool.from_function(
+        name="Movie Plot Search",
+        description="For when you need to compare a plot to a movie. The question will be a string. Return a string.",
+        func=run_retriever,
+        return_direct=True
+    )
 ]
 
 agent_prompt = hub.pull("hwchase17/react-chat")
