@@ -31,7 +31,8 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 chat_chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
 
 youtube = YouTubeSearchTool()
-embeddings = SentenceTransformerEmbeddings(model_name='sentence-transformers/bert-large-nli-mean-tokens')
+embeddings = SentenceTransformerEmbeddings(model_name='intfloat/e5-large-v2')
+
 movie_plot_vector = Neo4jVector.from_existing_index(
     embeddings,
     url="bolt://localhost:7687",
@@ -77,7 +78,9 @@ tools = [
 ]
 
 agent_prompt = hub.pull("hwchase17/react-chat")
+agent_prompt.template += "It is compulsory for you to use a tool to answer the question."
 agent = create_react_agent(llm, tools, agent_prompt)
+
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,

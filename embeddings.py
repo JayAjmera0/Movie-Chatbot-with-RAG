@@ -2,7 +2,7 @@ from sentence_transformers import SentenceTransformer
 from neo4j import GraphDatabase
 
 # Load the pre-trained model for generating embeddings
-model = SentenceTransformer('bert-large-nli-mean-tokens')
+model = SentenceTransformer('intfloat/e5-large-v2')
 
 # Define Neo4j connection details
 uri = "bolt://localhost:7687"
@@ -36,16 +36,13 @@ with driver.session() as session:
         title = node["title"]
         plot = node["plot"]
         node_id = node["node_id"]
-
-        existing_embedding = session.run("MATCH (m:Movie) WHERE id(m) = $node_id RETURN m.embedding", node_id=node_id).single()
-        if existing_embedding is None:
-            # Concatenate title and plot (separated by a delimiter)
-            combined_text = f"Title: {title}, Plot: {plot}"
-            # Generate embedding for the combined text
-            embedding = model.encode(combined_text)
-            session.write_transaction(update_node_with_embedding, node_id, embedding)
-        else:
-            print(f"Node {node_id} has an embedding. Skipping...")
+        
+        # Concatenate title and plot (separated by a delimiter)
+        combined_text = f"Title: {title}, Plot: {plot}"
+        # Generate embedding for the combined text
+        embedding = model.encode(combined_text)
+        session.write_transaction(update_node_with_embedding, node_id, embedding)
+        
 print("Job done")
 
 # Close the driver connection
