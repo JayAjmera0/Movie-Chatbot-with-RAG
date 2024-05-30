@@ -9,7 +9,9 @@ from langchain import hub
 from langchain_community.tools import YouTubeSearchTool
 from langchain_community.vectorstores.neo4j_vector import Neo4jVector
 from langchain_google_genai import GoogleGenerativeAI
-from langchain.embeddings import SentenceTransformerEmbeddings
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from neo4j import GraphDatabase
+
 # Initialize the Flask application
 app = Flask(__name__)
 
@@ -51,15 +53,67 @@ plot_retriever = RetrievalQA.from_llm(
 )
 
 def run_retriever(query):
-    results = plot_retriever.invoke({"query":query})
+    results = plot_retriever.invoke({"query": query})
     # format the results
     movies = '\n'.join([doc.metadata["title"] + " - " + doc.page_content for doc in results["source_documents"]])
     return movies
 
+uri = "bolt://localhost:7687"
+username = "neo4j"
+password = "kallind123"
+
+# Connect to Neo4j
+driver = GraphDatabase.driver(uri, auth=(username, password))
+
+def fetch_neo(tx, query):
+    result = tx.run(query)
+    records = list(result)
+    data = [record.data() for record in records]
+    return data
+
+answer_misc = PromptTemplate(
+    template="""The Labels of my neo4j database are:
+    Actor, Director, Genre, Movie, Person, User.
+
+    These are the properties that can be in these labels:
+    bio, born, bornIn, budget, countries, died, embedding, imdbId, imdbRating, imdbVotes, languages, movieId, name, plot, poster, rating, released, revenue, role, runtime, tagline, timestamp, title, tmdbId, URL, userId, year.
+
+    These are the relationships between Nodes.
+    ACTED_IN
+    DIRECTED
+    IN_GENRE
+    RATED
+
+    Remember: 
+    Always add a WHERE clause to your query to filter the results from null values.
+    Return ONLY the Cypher Query to fetch the answer to the following question in this format
+    cypher: query. No explanation, no extra stuff, return only the Cypher query:
+    {question}""",
+    input_variables=["question"],
+)
+
+def run_misc(query):
+    answer = llm.invoke(answer_misc.format(question=query))
+    # Trim the string to eliminate the first 6 characters
+    print("Original Answer:", answer)
+    cypher_query = str(answer[7:])
+    print("Trimmed Cypher Query:", cypher_query)
+    print("Type of Trimmed Query:", type(cypher_query))
+
+    with driver.session() as session:
+        result = session.read_transaction(fetch_neo, cypher_query)
+
+    # Process the result to create a string output
+    result_data = [record for record in result]
+    formatted_result = '\n'.join([str(record) for record in result_data])
+    print("Formatted Result:", formatted_result)
+
+    return formatted_result
+
 tools = [
     Tool.from_function(
         name="Movie Chat",
-        description="For when you need to chat about movies. The question will be a string. Return a string.",
+        description="For when you need to chat about finding movies. The question will be a string. Return a string.",
         func=chat_chain.run,
         return_direct=True,
     ),
@@ -74,7 +128,13 @@ tools = [
         description="For when you need to compare a plot to a movie. The question will be a string. Return a string.",
         func=run_retriever,
         return_direct=True
-    )
+    ),
+    Tool.from_function(
+        name="Miscellaneous",
+        description="For when you need to answer a miscellaneous question regarding information about movies, actors, directors, etc. The question will be a string. Return a string.",
+        func=run_misc,
+        return_direct=True
+    ),
 ]
 
 agent_prompt = hub.pull("hwchase17/react-chat")
@@ -103,4 +163,4 @@ def chat():
     return jsonify({"response": response["output"]})
 
 if __name__ == '__main__':
-    app.run(debug=True, port= 5001)
+    app.run(debug=True, port=5001)
