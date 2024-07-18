@@ -16,7 +16,6 @@ from neo4j import GraphDatabase
 app = Flask(__name__)
 
 # Initialize the movie chatbot components
-api_key = 'AIzaSyDg23ttajQ6Of7btE9av1YwfSY3w7Seq9Q'
 llm = GoogleGenerativeAI(model="models/gemini-pro", google_api_key=api_key)
 prompt = PromptTemplate(
     template="""
@@ -39,7 +38,7 @@ movie_plot_vector = Neo4jVector.from_existing_index(
     embeddings,
     url="bolt://localhost:7687",
     username="neo4j",
-    password="kallind123",
+    password= "password",
     index_name="moviePlots",
     embedding_node_property="embedding",
     text_node_property="plot",
