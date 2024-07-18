@@ -47,7 +47,7 @@ This project is a sophisticated movie recommendation system leveraging a Neo4j g
 
 1. *Clone the repository*:
     sh
-    git clone https://github.com/yourusername/yourrepository.git
+    git clone https://github.com/JayAjmera0/Movie-Chatbot-with-RAG.git
     
 2. *Navigate to the project directory*:
     sh
